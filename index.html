@@ -1,171 +1,153 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>可愛動物餵食器 - Live Demo</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Comic Sans MS', cursive, sans-serif;
-      background-color: #fff8f0;
-      color: #333;
-    }
-    header {
-      background-color: #ffe4e1;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 20px;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
-    header nav a {
-      margin: 0 10px;
-      text-decoration: none;
-      color: #333;
-      font-weight: bold;
-    }
-    .login-btn {
-      background-color: #ffb6b9;
-      color: white;
-      padding: 8px 12px;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-    }
-    .container {
-      display: flex;
-      flex-direction: row;
-      margin: 20px;
-    }
-    aside {
-      width: 200px;
-      background-color: #fff0f5;
-      padding: 15px;
-      border-radius: 10px;
-      height: fit-content;
-    }
-    aside a {
-      display: block;
-      margin: 10px 0;
-      text-decoration: none;
-      color: #666;
-    }
-    main {
-      flex: 1;
-      margin-left: 20px;
-    }
-    .features {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      justify-content: space-between;
-    }
-    .feature-item {
-      background-color: #ffffff;
-      flex: 1 1 calc(30% - 20px);
-      min-width: 250px;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      text-align: center;
-    }
-    .feature-item iframe, .feature-item img {
-      width: 100%;
-      height: 150px;
-      object-fit: cover;
-    }
-    footer {
-      background-color: #ffe4e1;
-      text-align: center;
-      padding: 20px;
-      margin-top: 40px;
-      font-size: 14px;
-      border-top: 1px solid #ccc;
-    }
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
-      }
-      aside {
-        width: 100%;
-        margin-bottom: 20px;
-      }
-      .features {
-        gap: 10px;
-        justify-content: center;
-      }
-      .feature-item {
-        flex: 1 1 calc(45% - 10px);
-      }
-    }
-    @media (max-width: 480px) {
-      .feature-item {
-        flex: 1 1 calc(45% - 10px);
-      }
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>拍頻視覺化（黃點留痕・純淨版）</title>
+<style>
+  :root{ --bg:#070b16; --txt:#e5e7eb; --dot:#fbbf24; }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--txt);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Arial;}
+  #wrap{position:relative;width:100%;height:100%;}
+  canvas{position:absolute;inset:0;display:block}
+  /* 右側速度面板 */
+  #panel{
+    position:absolute;right:0;top:0;height:100%;width:96px; z-index:2;
+    background:linear-gradient(180deg,#ffffff10,#00000008);
+    border-left:1px solid #ffffff18;backdrop-filter:blur(4px);
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+    padding:16px 12px;box-sizing:border-box;
+  }
+  #title{font-size:14px;opacity:.9;text-align:center}
+  .vslider{writing-mode:bt-lr;-webkit-appearance:slider-vertical;width:24px;height:56vh}
+  .val{font-variant-numeric:tabular-nums;font-weight:600}
+  #hint{position:absolute;left:14px;bottom:12px;font-size:12px;opacity:.7;z-index:2}
+</style>
 </head>
 <body>
-
-<header>
-  <div class="logo">
-    <a href="#">CuteFeeder</a>
-  </div>
-  <nav>
-    <a href="#">地圖 Map</a>
-    <a href="#">影片收藏</a>
-    <a href="#">關於我們</a>
-  </nav>
-  <button class="login-btn">登入 / 註冊</button>
-</header>
-
-<div class="container">
-  <aside>
-    <h3>主頁選單</h3>
-    <a href="#">首頁</a>
-    <a href="#">餵食紀錄</a>
-    <a href="#">機器介紹</a>
-    <a href="#">寵物活動</a>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="hint">點擊畫面暫停/繼續；右側滑桿調整「時間速度」。</div>
+  <aside id="panel">
+    <div id="title">速度 speed</div>
+    <input id="speed" class="vslider" type="range" min="0.2" max="3" step="0.01" value="1.0" />
+    <div class="val"><span id="speedVal">1.00</span>×</div>
   </aside>
-
-  <main>
-    <h2>直播餵食器 - Live Feeds</h2>
-    <div class="features">
-      <div class="feature-item">
-        <iframe src="https://via.placeholder.com/300x150?text=直播1" frameborder="0"></iframe>
-        <p>機器一 - 餵食中</p>
-      </div>
-      <div class="feature-item">
-        <iframe src="https://via.placeholder.com/300x150?text=直播2" frameborder="0"></iframe>
-        <p>機器二 - 餵食中</p>
-      </div>
-      <div class="feature-item">
-        <iframe src="https://via.placeholder.com/300x150?text=直播3" frameborder="0"></iframe>
-        <p>機器三 - 餵食中</p>
-      </div>
-      <div class="feature-item">
-        <iframe src="https://via.placeholder.com/300x150?text=直播4" frameborder="0"></iframe>
-        <p>機器四 - 餵食中</p>
-      </div>
-      <div class="feature-item">
-        <iframe src="https://via.placeholder.com/300x150?text=直播5" frameborder="0"></iframe>
-        <p>機器五 - 餵食中</p>
-      </div>
-      <div class="feature-item">
-        <iframe src="https://via.placeholder.com/300x150?text=直播6" frameborder="0"></iframe>
-        <p>機器六 - 餵食中</p>
-      </div>
-    </div>
-  </main>
 </div>
 
-<footer>
-  <p>© 2025 CuteFeeder. All Rights Reserved.</p>
-  <p><a href="#">Privacy Policy</a> | <a href="#">Contact Us</a> | <a href="#">Terms of Service</a></p>
-</footer>
+<script>
+(function(){
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
 
+  // ===== 物理參數（較密集） =====
+  const f0 = 4.0;    // 平均頻率 Hz（載波）
+  const fb = 0.40;   // 拍頻 Hz
+  const f1 = f0 - fb/2, f2 = f0 + fb/2;
+  const TWO_PI = Math.PI*2;
+  const w1 = TWO_PI*f1, w2 = TWO_PI*f2;
+  const wAvg = (w1+w2)/2;          // 載波角頻率
+  const wDiffHalf = (w1-w2)/2;     // 控制拍動的慢變
+
+  // ===== 畫布尺寸 / 中心點 =====
+  let W=0, H=0, DPR=1;
+  let centerX=0, centerY=0;
+
+  // 軌跡：trail[0] 是中心最新點；trail[i] 對應 x = centerX - i
+  let trail = [];
+  let trailLen = 0;
+
+  function initTrail(){
+    trailLen = Math.max(0, Math.floor(centerX)); // 只畫左半邊
+    trail = new Array(trailLen).fill(centerY);
+  }
+
+  function resize(){
+    DPR = Math.max(1, Math.min(3, window.devicePixelRatio||1));
+    // 讓 canvas 與視窗同大小
+    cv.style.width = '100%';
+    cv.style.height = '100%';
+    W = cv.clientWidth  = window.innerWidth;
+    H = cv.clientHeight = window.innerHeight;
+    cv.width  = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+
+    centerX = W/2;
+    centerY = H/2;
+    initTrail();
+  }
+  window.addEventListener('resize', resize);
+
+  // ===== 速度與暫停 =====
+  const speedEl = document.getElementById('speed');
+  const speedVal = document.getElementById('speedVal');
+  let speed = parseFloat(speedEl.value);
+  speedEl.addEventListener('input',()=>{ speed=parseFloat(speedEl.value); speedVal.textContent=speed.toFixed(2); });
+  let paused=false; cv.addEventListener('click',()=>paused=!paused);
+
+  // ===== 基本工具 =====
+  function clear(){ ctx.clearRect(0,0,W,H); }
+
+  function drawTrail(){
+    const n = Math.min(trail.length, trailLen);
+    if(n<=1) return;
+    ctx.save();
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(centerX, trail[0]);
+    for(let i=1;i<n;i++){
+      ctx.lineTo(centerX - i, trail[i]);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawDot(y){
+    // 光暈
+    ctx.save();
+    ctx.fillStyle = 'rgba(251,191,36,0.40)';
+    ctx.beginPath(); ctx.arc(centerX, y, 16, 0, Math.PI*2); ctx.fill();
+    // 本體
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath(); ctx.arc(centerX, y, 8.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function amplitudePx(){
+    return Math.min(H*0.24, 220); // 單一正弦振幅（像素）
+  }
+
+  function drawScene(t){
+    clear();
+
+    // 中央點位移（合成波 x(t)）
+    const A = amplitudePx();
+    const y = centerY - 2*A * Math.cos(wDiffHalf*t) * Math.sin(wAvg*t);
+
+    // 更新軌跡：塞入最新 y，限制長度 = 左半寬度
+    if(trailLen > 0){
+      trail.unshift(y);
+      if(trail.length > trailLen) trail.length = trailLen;
+    }
+
+    // 畫左向軌跡 + 中央黃點
+    drawTrail();
+    drawDot(y);
+  }
+
+  // ===== 啟動（先 resize 再進入主迴圈，避免 0 寬高）=====
+  resize();
+  let t = 0, last = performance.now();
+  function loop(now){
+    const dt = (now - last)/1000; last = now;
+    if(!paused) t += dt * speed;
+    drawScene(t);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
 </body>
 </html>
