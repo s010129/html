@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>拍頻視覺化 By毅 版本1.3還原版優化</title>
+<title>拍頻視覺化 By毅 版本1.4 還原版優化(平率分開控制) 巴拉巴拉</title>
 <style>
   :root{ --bg:#070b16; --txt:#e5e7eb; --dot:#fbbf24; }
   html,body{height:100%;margin:0;background:var(--bg);color:var(--txt);
@@ -13,16 +13,16 @@
 
   /* 右側控制面板 */
   #panel{
-    position:absolute;right:0;top:0;height:100%;width:160px; z-index:2;
+    position:absolute;right:0;top:0;height:100%;width:180px; z-index:2;
     background:linear-gradient(180deg,#ffffff10,#00000008);
     border-left:1px solid #ffffff18;backdrop-filter:blur(4px);
     display:flex;flex-direction:column;align-items:center;gap:12px;
     padding:16px 12px;box-sizing:border-box;
   }
   #panel h3{margin:6px 0 2px 0; font-size:13px; opacity:.9}
-  .vslider{writing-mode:bt-lr;-webkit-appearance:slider-vertical;width:24px;height:32vh}
+  .vslider{writing-mode:bt-lr;-webkit-appearance:slider-vertical;width:24px;height:28vh}
   .val{font-variant-numeric:tabular-nums;font-weight:600}
-  #stats{font-size:12px;line-height:1.35;text-align:center;opacity:.9}
+  #stats{font-size:12px;line-height:1.4;text-align:center;opacity:.9}
   #hint{position:absolute;left:14px;bottom:12px;font-size:12px;opacity:.7;z-index:2}
 
   .btn{
@@ -44,9 +44,13 @@
     <input id="speed" class="vslider" type="range" min="0.2" max="3" step="0.01" value="1.00" />
     <div class="val"><span id="speedVal">1.00</span>×</div>
 
-    <h3>頻率 f₀</h3>
-    <input id="freq" class="vslider" type="range" min="1" max="12" step="0.01" value="4.00" />
-    <div class="val"><span id="freqVal">4.00</span> Hz</div>
+    <h3>頻率 f₁</h3>
+    <input id="freq1" class="vslider" type="range" min="1" max="12" step="0.01" value="3.80" />
+    <div class="val"><span id="f1Val">3.80</span> Hz</div>
+
+    <h3>頻率 f₂</h3>
+    <input id="freq2" class="vslider" type="range" min="1" max="12" step="0.01" value="4.20" />
+    <div class="val"><span id="f2Val">4.20</span> Hz</div>
 
     <button id="clearBtn" class="btn" title="清除左側黃線">清除軌跡</button>
 
@@ -59,37 +63,41 @@
   // --- DOM ---
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d');
+
   const speedEl = document.getElementById('speed');
-  const speedVal = document.getElementById('speedVal');
-  const freqEl  = document.getElementById('freq');
-  const freqVal = document.getElementById('freqVal');
+  const speedVal= document.getElementById('speedVal');
+  const f1El    = document.getElementById('freq1');
+  const f1Val   = document.getElementById('f1Val');
+  const f2El    = document.getElementById('freq2');
+  const f2Val   = document.getElementById('f2Val');
   const clearBtn= document.getElementById('clearBtn');
   const stats   = document.getElementById('stats');
 
   // ===== 狀態 =====
   const state = {
-    f0: parseFloat(freqEl.value || '4.00'),   // 黃點載波頻率（物理）
-    fb: 0.40,                                 // 拍頻（固定；可擴充成第三滑桿）
-    speed: parseFloat(speedEl.value || '1.00')// 畫面捲動倍率（僅影響左側線）
+    f1: parseFloat(f1El.value || '3.80'),
+    f2: parseFloat(f2El.value || '4.20'),
+    speed: parseFloat(speedEl.value || '1.00')   // 畫面流速倍率
   };
 
-  // 畫面捲動的基準：1× = 240 像素/秒
+  // 畫面捲動的基準：1× = 240 像素/秒（越大線流得越快）
   const BASE_SCROLL_PX_PER_SEC = 240;
 
   // 衍生量
-  let f1, f2, w1, w2, wAvg, wDiffHalf, Tb;
+  let w1, w2, wAvg, wDiffHalf, f0, fb, Tb;
   function updateDerived(){
-    f1 = state.f0 - state.fb/2;
-    f2 = state.f0 + state.fb/2;
     const TWO_PI = Math.PI*2;
-    w1 = TWO_PI*f1; w2 = TWO_PI*f2;
-    wAvg = (w1+w2)/2;
-    wDiffHalf = (w1-w2)/2;
-    Tb = 1 / Math.max(1e-9, Math.abs(f1 - f2)); // 避免除以 0
+    w1 = TWO_PI*state.f1;
+    w2 = TWO_PI*state.f2;
+    wAvg = (w1 + w2)/2;
+    wDiffHalf = (w1 - w2)/2;
+    f0 = (state.f1 + state.f2)/2;
+    fb = Math.abs(state.f2 - state.f1);
+    Tb = 1 / Math.max(1e-9, fb);
     stats.innerHTML =
-      `f<sub>1</sub>=${f1.toFixed(2)} Hz<br>`+
-      `f<sub>2</sub>=${f2.toFixed(2)} Hz<br>`+
-      `f<sub>b</sub>=|f₁−f₂|=${Math.abs(f1-f2).toFixed(2)} Hz`;
+      `f<sub>0</sub> = ${(f0).toFixed(2)} Hz<br>`+
+      `f<sub>b</sub> = |f₂−f₁| = ${fb.toFixed(2)} Hz<br>`+
+      `T<sub>b</sub> = ${(1/Math.max(1e-9,fb)).toFixed(2)} s`;
   }
 
   // ===== 尺寸 / 中心 =====
@@ -103,8 +111,7 @@
     cv.height = Math.round(H * DPR);
     ctx.setTransform(DPR,0,0,DPR,0,0);
     centerX = W/2; centerY = H/2;
-    // 清空並重設歷史長度（讓清除後能重新長出）
-    historyPxLimit = Math.floor(centerX);
+    historyPxLimit = Math.floor(centerX); // 讓左側可畫滿
   }
   window.addEventListener('resize', resize);
 
@@ -113,11 +120,17 @@
     state.speed = parseFloat(speedEl.value);
     speedVal.textContent = state.speed.toFixed(2);
   });
-  freqEl.addEventListener('input', ()=>{
-    state.f0 = parseFloat(freqEl.value);
-    freqVal.textContent = state.f0.toFixed(2);
+  f1El.addEventListener('input', ()=>{
+    state.f1 = parseFloat(f1El.value);
+    f1Val.textContent = state.f1.toFixed(2);
     updateDerived();
   });
+  f2El.addEventListener('input', ()=>{
+    state.f2 = parseFloat(f2El.value);
+    f2Val.textContent = state.f2.toFixed(2);
+    updateDerived();
+  });
+
   let paused=false;
   cv.addEventListener('click',()=> paused = !paused);
   window.addEventListener('keydown',(e)=>{
@@ -126,32 +139,28 @@
   });
   clearBtn.addEventListener('click', clearTrail);
 
-  // ===== 「清除軌跡」：從 0 開始逐步長回到整個左半邊 =====
-  let historyPxLimit = 0; // 目前允許繪製的最長像素（從中心往左）
+  // 清除軌跡（從中心重新長出）
+  let historyPxLimit = 0;
   function clearTrail(){ historyPxLimit = 0; }
 
-  // ===== 工具 =====
+  // 工具
   function clear(){ ctx.clearRect(0,0,W,H); }
   function amplitudePx(){ return Math.min(H*0.24, 220); }
   function yOfTime(t, A){ return centerY - 2*A*Math.cos(wDiffHalf*t)*Math.sin(wAvg*t); }
 
-  // ===== 主繪圖 =====
+  // 主繪圖
   function drawScene(t, dt){
     clear();
     const A = amplitudePx();
 
-    // 黃點（只用真實時間 t，不乘速度）
+    // 黃點：用真實時間 t（不受畫面速度影響）
     const yNow = yOfTime(t, A);
 
-    // 畫面捲動速度（像素/秒），只影響左側歷史線的「時間對應距離」
+    // 左側歷史線：以畫面速度把「過去時間」映射到像素距離
     const scrollPxPerSec = BASE_SCROLL_PX_PER_SEC * state.speed;
-
-    // 清除後讓歷史線逐步「長回」左側
     const maxLeftPx = Math.floor(centerX);
     historyPxLimit = Math.min(maxLeftPx, historyPxLimit + scrollPxPerSec * dt);
 
-    // 繪製左側歷史線（中心→左），
-    // 第 i 個像素代表「往回 i/scrollPxPerSec 秒」的 y 值
     ctx.save();
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 2;
@@ -159,14 +168,14 @@
     ctx.moveTo(centerX, yNow);
     const N = Math.min(maxLeftPx, Math.floor(historyPxLimit));
     for(let i=1; i<=N; i++){
-      const ti = t - i/scrollPxPerSec;           // 歷史時間
+      const ti = t - i/scrollPxPerSec; // 過去的時間點
       const yi = yOfTime(ti, A);
       ctx.lineTo(centerX - i, yi);
     }
     ctx.stroke();
     ctx.restore();
 
-    // 畫中央黃點
+    // 中央黃點
     ctx.save();
     ctx.fillStyle = 'rgba(251,191,36,0.40)';
     ctx.beginPath(); ctx.arc(centerX, yNow, 16, 0, Math.PI*2); ctx.fill();
@@ -175,17 +184,18 @@
     ctx.restore();
   }
 
-  // ===== 啟動 =====
+  // 啟動
   speedVal.textContent = state.speed.toFixed(2);
-  freqVal.textContent  = state.f0.toFixed(2);
+  f1Val.textContent = state.f1.toFixed(2);
+  f2Val.textContent = state.f2.toFixed(2);
   updateDerived();
   resize();
 
   let t = 0, last = performance.now();
   function loop(now){
     const dt = (now - last)/1000; last = now;
-    if(!paused) t += dt;                 // ★ 黃點用真實時間前進（與速度無關）
-    drawScene(t, dt);                    // ★ 畫面速度只進入繪圖映射
+    if(!paused) t += dt;           // 黃點依物理解算（與畫面速度無關）
+    drawScene(t, dt);              // 畫面速度只影響歷史線的映射
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
